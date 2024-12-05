@@ -142,6 +142,10 @@ func mockMode1Outputs(subcmd string) []string {
 		return []string{
 			"41 A4 27 10 00 00", // 10.0:1
 		}
+	} else if strings.HasPrefix(subcmd, "11") { // Throttle Position
+		return []string{
+			"41 11 50", // 50% throttle
+		}
 	}
 
 	return []string{"NOT SUPPORTED"}
