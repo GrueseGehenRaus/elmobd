@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+var lehm int32 = -1
+
 /*==============================================================================
  * External
  */
@@ -111,16 +113,86 @@ func mockMode1Outputs(subcmd string) []string {
 			"41 06 02", // -98.4375%
 		}
 	} else if strings.HasPrefix(subcmd, "0C") { // Engine speed
+		if lehm > 26 {
+			lehm = -1
+		}
+		lehm += 1
+		lehms := []string{
+			"41 0C 13 40",
+			"41 0C 15 28",
+			"41 0C 17 10",
+			"41 0C 19 F8",
+			"41 0C 1B E0",
+			"41 0C 1D C8",
+			"41 0C 1F B0",
+			"41 0C 21 98",
+			"41 0C 23 80",
+			"41 0C 25 68",
+			"41 0C 27 50",
+			"41 0C 29 38",
+			"41 0C 2A 20",
+			"41 0C 2C 08",
+			"41 0C 2E F0",
+			"41 0C 31 D8",
+			"41 0C 2E F0",
+			"41 0C 2C 08",
+			"41 0C 2A 20",
+			"41 0C 29 38",
+			"41 0C 27 50",
+			"41 0C 25 68",
+			"41 0C 23 80",
+			"41 0C 21 98",
+			"41 0C 1F B0",
+			"41 0C 1D C8",
+			"41 0C 1B E0",
+			"41 0C 19 F8",
+			"41 0C 17 10",
+			"41 0C 15 28",
+			"41 0C 13 40",
+		}
 		return []string{
-			"41 0C 03 00", // 192 rpm
+			lehms[lehm],
 		}
 	} else if strings.HasPrefix(subcmd, "2F") { // Fuel tank level input
 		return []string{
 			"41 2F 6B", // 41.96%
 		}
 	} else if strings.HasPrefix(subcmd, "0D") { // Vehicle speed
+		lehms := []string{
+			"41 0D 00",
+			"41 0D 03",
+			"41 0D 05",
+			"41 0D 0A",
+			"41 0D 0F",
+			"41 0D 14",
+			"41 0D 19",
+			"41 0D 1E",
+			"41 0D 23",
+			"41 0D 28",
+			"41 0D 2D",
+			"41 0D 32",
+			"41 0D 37",
+			"41 0D 3C",
+			"41 0D 41",
+			"41 0D 46",
+			"41 0D 4B",
+			"41 0D 50",
+			"41 0D 55",
+			"41 0D 5A",
+			"41 0D 5F",
+			"41 0D 64",
+			"41 0D 69",
+			"41 0D 6B",
+			"41 0D 71",
+			"41 0D 76",
+			"41 0D 7A",
+			"41 0D 7F",
+			"41 0D 80",
+			"41 0D 85",
+			"41 0D 89",
+		}
 		return []string{
-			"41 0D 4B", // 75 km/h
+			lehms[lehm],
 		}
 	} else if strings.HasPrefix(subcmd, "31") { // Distance traveled since codes cleared
 		return []string{
