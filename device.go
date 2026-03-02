@@ -12,6 +12,18 @@ import (
  * External
  */
 
+// ELMError represents a textual status or error response from the ELM327
+// adapter (e.g., "CAN ERROR", "NO DATA", "STOPPED", "UNABLE TO CONNECT").
+// Callers can use errors.As to distinguish these from parse errors.
+type ELMError struct {
+	// Message is the raw line returned by the ELM327 adapter.
+	Message string
+}
+
+func (e *ELMError) Error() string {
+	return fmt.Sprintf("ELM327 error: %s", e.Message)
+}
+
 // Result represents the results from running a command on the ELM327 device,
 // encoded as a byte array. When you run a command on the ELM327 device the
 // response is a space-separated string of hex bytes, which looks something
@@ -29,10 +41,36 @@ type Result struct {
 	value []byte
 }
 
+// elmTextualResponses lists known ELM327 textual status/error responses that
+// should be detected before attempting to parse OBD hex bytes. Comparison is
+// done against the uppercased, trimmed line so variations in casing are caught.
+var elmTextualResponses = []string{
+	"CAN ERROR",
+	"NO DATA",
+	"STOPPED",
+	"UNABLE TO CONNECT",
+	"SEARCHING...",
+	"BUS INIT",
+	"ERR",
+	"FB ERROR",
+	"DATA ERROR",
+	"BUFFER FULL",
+	"LV RESET",
+	"OUT OF MEMORY",
+}
+
 // NewResult constructors a Result by taking care of parsing the hex bytes into
 // binary representation.
 func NewResult(rawLine string) (*Result, error) {
-	literals := strings.Split(rawLine, " ")
+	normalized := strings.ToUpper(strings.TrimSpace(rawLine))
+
+	for _, known := range elmTextualResponses {
+		if normalized == known {
+			return nil, &ELMError{Message: rawLine}
+		}
+	}
+
+	literals := strings.Fields(rawLine)
 
 	if len(literals) < 3 {
 		return nil, fmt.Errorf(
@@ -519,17 +557,19 @@ func parseOBDResponse(cmd OBDCommand, outputs []string) (*Result, error) {
 	payload := ""
 
 	for _, out := range outputs {
-		if strings.HasPrefix(out, "UNABLE TO CONNECT") {
-			return nil, fmt.Errorf(
-				"'UNABLE TO CONNECT' received, is the ignition on?",
-			)
-		} else if strings.HasPrefix(out, "NO DATA") {
-			return nil, fmt.Errorf(
-				"'NO DATA' received, timeout from elm device?",
-			)
-		} else if strings.HasPrefix(out, "SEARCHING") {
+		normalized := strings.ToUpper(strings.TrimSpace(out))
+
+		if strings.HasPrefix(normalized, "UNABLE TO CONNECT") {
+			return nil, &ELMError{Message: out}
+		} else if strings.HasPrefix(normalized, "NO DATA") {
+			return nil, &ELMError{Message: out}
+		} else if strings.HasPrefix(normalized, "CAN ERROR") {
+			return nil, &ELMError{Message: out}
+		} else if strings.HasPrefix(normalized, "STOPPED") {
+			return nil, &ELMError{Message: out}
+		} else if strings.HasPrefix(normalized, "SEARCHING") {
 			continue
-		} else if strings.HasPrefix(out, "BUS INIT") {
+		} else if strings.HasPrefix(normalized, "BUS INIT") {
 			continue
 		}
 
