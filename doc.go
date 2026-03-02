@@ -32,30 +32,30 @@
 // plug in your device into your computer, get the path to the device and
 // initialize a new device:
 //
-//     package main
+//	package main
 //
-//     import (
-//         "flag"
-//         "fmt"
-//         "github.com/rzetterberg/elmobd"
-//     )
+//	import (
+//	    "flag"
+//	    "fmt"
+//	    "github.com/rzetterberg/elmobd"
+//	)
 //
-//     func main() {
-//         serialPath := flag.String(
-//             "serial",
-//             "/dev/ttyUSB0",
-//             "Path to the serial device to use",
-//         )
+//	func main() {
+//	    serialPath := flag.String(
+//	        "serial",
+//	        "/dev/ttyUSB0",
+//	        "Path to the serial device to use",
+//	    )
 //
-//         flag.Parse()
+//	    flag.Parse()
 //
-//         dev, err := elmobd.NewDevice(*serialPath, false)
+//	    dev, err := elmobd.NewDevice(*serialPath, false)
 //
-//         if err != nil {
-//             fmt.Println("Failed to create new device", err)
-//             return
-//         }
-//     }
+//	    if err != nil {
+//	        fmt.Println("Failed to create new device", err)
+//	        return
+//	    }
+//	}
 //
 // This library is design to be as high level as possible, you shouldn't need to
 // handle baud rates, setting protocols or anything like that. After the Device
@@ -79,14 +79,14 @@
 // creating a new VehicleSpeed using its constructor NewVehicleSpeed that we
 // then give to RunOBDCommand:
 //
-//     speed, err := dev.RunOBDCommand(elmobd.NewVehicleSpeed())
+//	speed, err := dev.RunOBDCommand(elmobd.NewVehicleSpeed())
 //
-//     if err != nil {
-//         fmt.Println("Failed to get vehicle speed", err)
-//         return
-//     }
+//	if err != nil {
+//	    fmt.Println("Failed to get vehicle speed", err)
+//	    return
+//	}
 //
-//     fmt.Printf("Vehicle speed: %d km/h\n", speed.Value)
+//	fmt.Printf("Vehicle speed: %d km/h\n", speed.Value)
 //
 // At the moment there are around 15 sensor commands defined in this library.
 // They are all defined in the file commands.go of the library

@@ -14,7 +14,7 @@ func assert(t *testing.T, assertion bool, msg string) {
 		return
 	}
 
-	t.Fatal(fmt.Sprintf("Assertion %s failed", msg))
+	t.Fatalf("Assertion %s failed", msg)
 }
 
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
