@@ -12,12 +12,24 @@ import (
  * External
  */
 
+// ELMError represents a textual status or error response from the ELM327
+// adapter (e.g., "CAN ERROR", "NO DATA", "STOPPED", "UNABLE TO CONNECT").
+// Callers can use errors.As to distinguish these from parse errors.
+type ELMError struct {
+	// Message is the raw line returned by the ELM327 adapter.
+	Message string
+}
+
+func (e *ELMError) Error() string {
+	return fmt.Sprintf("ELM327 error: %s", e.Message)
+}
+
 // Result represents the results from running a command on the ELM327 device,
 // encoded as a byte array. When you run a command on the ELM327 device the
 // response is a space-separated string of hex bytes, which looks something
 // like this:
 //
-//   41 0C 1A F8
+//	41 0C 1A F8
 //
 // The first 2 bytes are control bytes, while the rest of the bytes represent
 // the actual result. So this data type contains an array of those bytes in
@@ -29,14 +41,40 @@ type Result struct {
 	value []byte
 }
 
+// elmTextualResponses lists known ELM327 textual status/error responses that
+// should be detected before attempting to parse OBD hex bytes. Comparison is
+// done against the uppercased, trimmed line so variations in casing are caught.
+var elmTextualResponses = []string{
+	"CAN ERROR",
+	"NO DATA",
+	"STOPPED",
+	"UNABLE TO CONNECT",
+	"SEARCHING...",
+	"BUS INIT",
+	"ERR",
+	"FB ERROR",
+	"DATA ERROR",
+	"BUFFER FULL",
+	"LV RESET",
+	"OUT OF MEMORY",
+}
+
 // NewResult constructors a Result by taking care of parsing the hex bytes into
 // binary representation.
 func NewResult(rawLine string) (*Result, error) {
-	literals := strings.Split(rawLine, " ")
+	normalized := strings.ToUpper(strings.TrimSpace(rawLine))
+
+	for _, known := range elmTextualResponses {
+		if normalized == known {
+			return nil, &ELMError{Message: rawLine}
+		}
+	}
+
+	literals := strings.Fields(rawLine)
 
 	if len(literals) < 3 {
 		return nil, fmt.Errorf(
-			"Expected at least 3 OBD literals: %s", rawLine,
+			"expected at least 3 OBD literals: %s", rawLine,
 		)
 	}
 
@@ -69,7 +107,7 @@ func (res *Result) Validate(cmd OBDCommand) error {
 
 	if valueLen != expLen {
 		return fmt.Errorf(
-			"Expected %d bytes, found %d",
+			"expected %d bytes, found %d",
 			expLen,
 			valueLen,
 		)
@@ -79,7 +117,7 @@ func (res *Result) Validate(cmd OBDCommand) error {
 
 	if res.value[0] != modeResp {
 		return fmt.Errorf(
-			"Expected mode echo %02X, got %02X",
+			"expected mode echo %02X, got %02X",
 			modeResp,
 			res.value[0],
 		)
@@ -87,7 +125,7 @@ func (res *Result) Validate(cmd OBDCommand) error {
 
 	if OBDParameterID(res.value[1]) != cmd.ParameterID() {
 		return fmt.Errorf(
-			"Expected parameter echo %02X got %02X",
+			"expected parameter echo %02X got %02X",
 			cmd.ParameterID(),
 			res.value[1],
 		)
@@ -112,7 +150,7 @@ func (res *Result) payloadAsUInt(expAmount int) (uint64, error) {
 
 	if amount != expAmount {
 		return 0, fmt.Errorf(
-			"Expected %d bytes of payload, got %d", expAmount, amount,
+			"expected %d bytes of payload, got %d", expAmount, amount,
 		)
 	}
 
@@ -251,7 +289,7 @@ func (dev *Device) SetAutomaticProtocol() error {
 
 	if outputs[0] != "OK" {
 		return fmt.Errorf(
-			"Expected OK response, got: %q",
+			"expected OK response, got: %q",
 			outputs[0],
 		)
 	}
@@ -273,9 +311,9 @@ func (dev *Device) GetVersion() (string, error) {
 	}
 
 	outputs := rawRes.GetOutputs()
-	version := outputs[0][:]
+	version := outputs[0]
 
-	return strings.Trim(version, " "), nil
+	return strings.TrimSpace(version), nil
 }
 
 // GetVoltage gets the current battery voltage of the vehicle as measured
@@ -334,7 +372,7 @@ func (dev *Device) CheckSupportedCommands() (*SupportedCommands, error) {
 
 	index := byte(1)
 
-	for {
+	for index <= 7 {
 		part := NewPartSupported(index)
 
 		partRes, err := dev.RunOBDCommand(part)
@@ -372,10 +410,10 @@ func (dev *Device) RunOBDCommand(cmd OBDCommand) (OBDCommand, error) {
 
 	if err != nil {
 		return cmd, err
-	} else {
-		if result == nil {
-			return cmd, nil
-		}
+	}
+
+	if result == nil {
+		return cmd, nil
 	}
 
 	err = result.Validate(cmd)
@@ -441,11 +479,11 @@ func (sc *SupportedCommands) GetPart(index byte) (*PartSupported, error) {
 	partsAmount := len(sc.parts)
 
 	if partsAmount == 0 {
-		return nil, fmt.Errorf("Cannot get part by index %d, as there are no parts", index)
+		return nil, fmt.Errorf("cannot get part by index %d, as there are no parts", index)
 	}
 
 	if index >= byte(partsAmount) {
-		return nil, fmt.Errorf("Cannot get part by index %d, there are only %d parts", index, partsAmount)
+		return nil, fmt.Errorf("cannot get part by index %d, there are only %d parts", index, partsAmount)
 	}
 
 	return sc.parts[index], nil
@@ -519,17 +557,19 @@ func parseOBDResponse(cmd OBDCommand, outputs []string) (*Result, error) {
 	payload := ""
 
 	for _, out := range outputs {
-		if strings.HasPrefix(out, "UNABLE TO CONNECT") {
-			return nil, fmt.Errorf(
-				"'UNABLE TO CONNECT' received, is the ignition on?",
-			)
-		} else if strings.HasPrefix(out, "NO DATA") {
-			return nil, fmt.Errorf(
-				"'NO DATA' received, timeout from elm device?",
-			)
-		} else if strings.HasPrefix(out, "SEARCHING") {
+		normalized := strings.ToUpper(strings.TrimSpace(out))
+
+		if strings.HasPrefix(normalized, "UNABLE TO CONNECT") {
+			return nil, &ELMError{Message: out}
+		} else if strings.HasPrefix(normalized, "NO DATA") {
+			return nil, &ELMError{Message: out}
+		} else if strings.HasPrefix(normalized, "CAN ERROR") {
+			return nil, &ELMError{Message: out}
+		} else if strings.HasPrefix(normalized, "STOPPED") {
+			return nil, &ELMError{Message: out}
+		} else if strings.HasPrefix(normalized, "SEARCHING") {
 			continue
-		} else if strings.HasPrefix(out, "BUS INIT") {
+		} else if strings.HasPrefix(normalized, "BUS INIT") {
 			continue
 		}
 

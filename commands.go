@@ -47,7 +47,7 @@ func (cmd *baseCommand) ModeID() byte {
 
 // ParameterID retrieves the Parameter ID (also called PID) of the command.
 func (cmd *baseCommand) ParameterID() OBDParameterID {
-	return OBDParameterID(cmd.parameterID)
+	return cmd.parameterID
 }
 
 // DataWidth retrieves the amount of bytes the command expects from the ELM327
@@ -231,10 +231,10 @@ func (part *PartSupported) CommandInRange(cmd OBDCommand) bool {
 //
 // In order to check if a bit is active, we can either:
 //
-// - Shift the bits of the value to the right until the bit we want to check
-//   has the position D0 and then use a AND bitwise conditional with the mask 0x1
-// - Shift the bits of the mask 0x1 to the left until it has the same position as
-//   the bit we want to check and then use a AND bitwise conditional with value
+//   - Shift the bits of the value to the right until the bit we want to check
+//     has the position D0 and then use a AND bitwise conditional with the mask 0x1
+//   - Shift the bits of the mask 0x1 to the left until it has the same position as
+//     the bit we want to check and then use a AND bitwise conditional with value
 //
 // This function uses the first method of checking if the bit is active.
 //
@@ -296,7 +296,7 @@ type MonitorStatus struct {
 // ValueAsLit retrieves the value as a literal representation.
 func (cmd *MonitorStatus) ValueAsLit() string {
 	return fmt.Sprintf(
-		"{\"mil_active\": %t, \"dts_amount\": %d",
+		"{\"mil_active\": %t, \"dts_amount\": %d}",
 		cmd.MilActive,
 		cmd.DtcAmount,
 	)
@@ -320,7 +320,7 @@ func (cmd *MonitorStatus) SetValue(result *Result) error {
 
 	if amount != expAmount {
 		return fmt.Errorf(
-			"Expected %d bytes of payload, got %d", expAmount, amount,
+			"expected %d bytes of payload, got %d", expAmount, amount,
 		)
 	}
 

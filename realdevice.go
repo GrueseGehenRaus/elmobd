@@ -209,7 +209,7 @@ func (dev *RealDevice) Reset() error {
 			output += " " + dev.outputs[1]
 		}
 		err = fmt.Errorf(
-			"Device did not identify itself as ELM327: %s",
+			"device did not identify itself as ELM327: %s",
 			output,
 		)
 	}
@@ -346,13 +346,13 @@ func (dev *RealDevice) read() error {
 
 func (dev *RealDevice) processResult(result bytes.Buffer) error {
 	parts := strings.Split(
-		string(result.Bytes()),
+		result.String(),
 		"\r",
 	)
 
 	if parts[0] != dev.input {
 		return fmt.Errorf(
-			"Write echo mismatch: %q not suffix of %q",
+			"write echo mismatch: %q not suffix of %q",
 			dev.input,
 			parts[0],
 		)
@@ -373,7 +373,7 @@ func (dev *RealDevice) processResult(result bytes.Buffer) error {
 	}
 
 	if len(trimmedParts) < 1 {
-		return fmt.Errorf("No payload received")
+		return fmt.Errorf("no payload received")
 	}
 
 	dev.outputs = trimmedParts
